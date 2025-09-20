@@ -1,0 +1,40 @@
+{
+  "name": "asset-manager",
+  "version": "0.0.1",
+  "description": "emNavi Asset Manager",
+  "main": "main/main.js",
+  "scripts": {
+    "dev": "node scripts/dev-server.js",
+    "build": "node scripts/build.js && electron-builder",
+    "build:win": "node scripts/build.js && electron-builder --win",
+    "build:mac": "node scripts/build.js && electron-builder --mac",
+    "build:linux": "node scripts/build.js && electron-builder --linux"
+  },
+  "repository": "https://github.com/emNavi/emnavidiscover.git",
+  "author": {
+    "name": "emNavi",
+    "url": "https://github.com/emNavi"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^4.4.1",
+    "chalk": "^4.1.2",
+    "chokidar": "^3.5.3",
+    "electron": "^32.1.2",
+    "electron-builder": "^25.1.6",
+    "typescript": "^5.2.2",
+    "vite": "^4.5.0"
+  },
+  "dependencies": {
+    "@element-plus/icons-vue": "^2.3.1",
+    "async-await-queue": "^2.1.4",
+    "async-mutex": "^0.5.0",
+    "axios": "^1.7.9",
+    "dgram": "^1.0.1",
+    "element-plus": "^2.9.5",
+    "ip": "^2.0.1",
+    "is-in-subnet": "^4.0.1",
+    "uuid": "^13.0.0",
+    "vue": "^3.3.8"
+  },
+  "packageManager": "pnpm@10.4.1+sha512.c753b6c3ad7afa13af388fa6d808035a008e30ea9993f58c6663e2bc5ff21679aa834db094987129aa4d488b86df57f7b634981b2f827cdcacc698cc0cfb88af"
+}

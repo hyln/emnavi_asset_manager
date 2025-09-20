@@ -1,0 +1,50 @@
+{
+    "appId": "tech.emnavi.assetmanager",
+    "directories": {
+        "output": "dist"
+    },
+
+    "nsis": {
+        "oneClick": false,
+        "perMachine": false,
+        "allowToChangeInstallationDirectory": true,
+        "shortcutName": "emNavi Asset Manager"
+    },
+    "win": {
+        "target": "nsis"
+    },
+    "linux":  {
+        "target": "deb",
+        "description": "emNavi Asset Manager",
+        "maintainer": "emnavi <discover@emnavi.tech>",
+        "icon": "src/main/static/airportFunction05.png"
+    },
+    "files": [
+        {
+            "from": "build/main",
+            "to": "main",
+            "filter": ["**/*"]
+        },
+        {
+            "from": "build/renderer",
+            "to": "renderer",
+            "filter": ["**/*"]
+        },
+        {
+            "from": "src/main/static",
+            "to": "static",
+            "filter": ["**/*"]
+        },
+    
+	"!build",
+	"!dist",
+	"!scripts"
+    ],
+    "extraResources": [
+    {
+        "from": "src/main/static",
+        "to": "static",
+        "filter": ["**/*"]
+    }
+    ]
+}
