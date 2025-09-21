@@ -5,7 +5,7 @@ import { ref, onMounted, nextTick } from 'vue';
 
 import Login from './components/Login.vue';
 import { version } from '../../package.json';
-import FileBrowser from './components/FileBrowser.vue';
+import Main from './views/Main.vue';
 // window.electronAPI.sendMessage('Hello from App.vue!');
 // window.electronAPI.sendMessage('Hello from App.vue!');
 
@@ -16,14 +16,12 @@ const isLogin_f = ref(false);
 
 <template>
   <main class="container">
-    <FileBrowser v-if="isLogin_f" />
-  <Login v-else @isLogin="(val: boolean) => isLogin_f = val" />
-
-
+    <!-- <FileBrowser v-if="isLogin_f" /> -->
+    <Main v-if="isLogin_f" />
+    <Login v-else @isLogin="(val: boolean) => isLogin_f = val" />
     <!-- <Login v-else @isLogin="(val: any) => isLogin.valueOf = val" /> -->
-
+    <p class="version">V{{ version }}-dev</p>
   </main>
-  <p class="version">V{{ version }}-dev</p>
 </template>
 
 <style scoped>
