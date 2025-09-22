@@ -17,7 +17,7 @@
         "target": "deb",
         "description": "emNavi Asset Manager",
         "maintainer": "emnavi <discover@emnavi.tech>",
-        "icon": "src/main/static/airportFunction05.png"
+        "icon": "src/main/static/Assets.png"
     },
     "files": [
         {

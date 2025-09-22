@@ -11,21 +11,16 @@
                     </a>
                 </el-breadcrumb-item>
             </el-breadcrumb>
-            <!-- <el-upload
-                :action="uploadUrl"
-                :data="{ path: currentPath }"
-                :show-file-list="false"
-                @success="onUploadSuccess"
-                style="display:inline-block;margin-left:20px;"
-            >
-            <el-button size="small" type="primary">上传文件</el-button>
-            </el-upload> -->
             <el-button size="small" type="success" @click="createFolder" style="margin-left:10px;">
                 <i class="el-icon-folder-add" style="margin-right:4px;"></i>新建文件夹
             </el-button>
             <el-button size="small" type="danger" @click="onDelete" style="margin-left:10px;">
                 <i class="el-icon-delete" style="margin-right:4px;"></i>删除
             </el-button>
+            <el-tag type="info" style="margin-left:20px;">
+                剩余空间: {{ diskInfo?.free_gb ? (diskInfo.free_gb).toFixed(2) : '-' }} GB /
+                总空间: {{ diskInfo?.total_gb ? (diskInfo.total_gb).toFixed(2) : '-' }} GB
+            </el-tag>
 
         </div>
         <el-table
@@ -44,7 +39,7 @@
                 min-width="180"
             >
                 <template #default="scope">
-                    <div @contextmenu.prevent="openMenu($event, scope.row)">
+                    <div >
                         <span v-if="scope.row.isDirectory">📁</span>
                         <span v-else>📄</span>
                         <span
@@ -55,7 +50,6 @@
                         >复制下载链接</span>
                         {{ scope.row.name }}
                     </div>
-                    <!-- {{ scope.row.name }} -->
                 </template>
             </el-table-column>
             <el-table-column
@@ -85,18 +79,26 @@
     </el-card>
 </template>
 
-<script setup>
-import { ref, computed, onMounted } from 'vue'
+<script setup lang="ts">
+import { ref, computed, onMounted, defineEmits } from 'vue'
 import { ElCard,ElMessageBox,ElMessage, ElBreadcrumb, ElBreadcrumbItem, ElTable, ElTableColumn, ElTag, ElUpload, ElButton } from 'element-plus'
 import 'element-plus/dist/index.css'
 import axios from 'axios'
 import RightClick from '../components/RightClick.vue';
 
-// 假设后端接口
-const uploadUrl = '/api/upload'
-const downloadUrl = '/api/download'
-
 const choose_file_path = ref(null)
+const diskInfo = ref({
+  total_gb: 0,    // 总容量，单位可为字节
+  free_gb: 0,  // 可用容量
+});
+
+
+const emit = defineEmits<{
+  (e: 'choose-file-change', value: string | null): void
+}>()
+
+
+
 function onCurrentChange(row) {
     console.log('当前选中行:', row);
     if (!row) {
@@ -107,6 +109,7 @@ function onCurrentChange(row) {
         ? `${currentPath.value}/${row.name}`
         : row.name
     console.log('当前选中行:', choose_file_path.value);
+    emit('choose-file-change', row)
 }
 
 // 用于真实后端接口
@@ -118,56 +121,24 @@ async function fetchItems(path) {
 async function loadItems() {
     items.value = await fetchItems(currentPath.value)
     console.log(items.value);
-}
-const mockFS = {
-    '': [
-        { name: 'Documents', isDirectory: true },
-        { name: 'Pictures', isDirectory: true },
-        { name: 'readme.txt', isDirectory: false }
-    ],
-    'Documents': [
-        { name: 'Resume.docx', isDirectory: false },
-        { name: 'Notes', isDirectory: true }
-    ],
-    'Documents/Notes': [
-        { name: 'todo.txt', isDirectory: false }
-    ],
-    'Pictures': [
-        { name: 'photo.jpg', isDirectory: false }
-    ]
+    await fetchDiskInfo().then(res => {
+        console.log("res",res);
+        diskInfo.value.total_gb = res.diskInfo.total_gb;
+        diskInfo.value.free_gb = res.diskInfo.free_gb;
+    }).catch(err => {
+        console.error('获取磁盘信息失败:', err);
+        return { total_gb: 0, free_gb: 0 };
+    });
+    console.log('磁盘信息:', diskInfo.value);
 }
 
 const currentPath = ref('')
 const items = ref([])
-const ctx = ref(null)
-// const menuItems = [
-//   { key: 'open', label: '📂 打开' },
-//   { key: 'download', label: '⬇️ 下载' },
-//   { key: 'rename', label: '✏️ 重命名' },
-//   { key: 'delete', label: '🗑 删除' }
-// ] 
+
 const pathSegments = computed(() =>
     currentPath.value ? currentPath.value.split('/').filter(Boolean) : []
 )
 
-// function onMenuSelect({ action, target }) {
-//   // target 即为之前传入的 file
-//   console.log('menu action', action, 'target', target)
-//   if (action === 'open') {
-//     // 打开目录或文件
-//   } else if (action === 'download') {
-//     // 调用下载
-//   } else if (action === 'delete') {
-//     // 删除
-//   }
-// }
-// function loadItems() {
-//     items.value = mockFS[currentPath.value] || []
-// }
-function openMenu(e, file) {
-  // e.clientX/e.clientY 是相对于视口的坐标
-  ctx.value.openAt(e.clientX, e.clientY, file)
-}
 function open(row) {
     console.log(currentPath.value);
     if (row.isDirectory) {
@@ -185,18 +156,6 @@ function goTo(idx) {
         currentPath.value = pathSegments.value.slice(0, idx + 1).join('/')
     }
     loadItems()
-}
-
-function onUploadSuccess() {
-    // 上传成功后刷新
-    loadItems()
-}
-
-function download(row) {
-    // 实际应调用后端接口
-    // 这里只是模拟
-    const filePath = currentPath.value ? `${currentPath.value}/${row.name}` : row.name
-    window.open(`${downloadUrl}?path=${encodeURIComponent(filePath)}`)
 }
 function createFolder() {
   console.log('Creating folder in', currentPath.value);
@@ -238,13 +197,14 @@ function copyDownloadLink(row) {
 }
 
 function onDelete() {
-    const selected = items.value.filter(item => item._selected);
+    const selected = choose_file_path.value ? [choose_file_path.value] : [];
     if (selected.length === 0) {
         ElMessage.warning('请先选择要删除的文件或文件夹');
         return;
     }
+    
     ElMessageBox.confirm(
-        `确定要删除选中的 ${selected.length} 个项目吗？此操作不可撤销。`,
+        `确定要删除选中的 ${selected.length} 个项目吗？此操作不可撤销。${selected}`,
         '删除确认',
         {
             confirmButtonText: '删除',
@@ -252,8 +212,8 @@ function onDelete() {
             type: 'warning'
         }
     ).then(() => {
-        const names = selected.map(item => item.name);
-        return window.electronAPI.deleteItems(currentPath.value, names);
+        // const names = selected.map(item => item.name);
+        return window.electronAPI.deleteItems(selected);
     }).then(() => {
         ElMessage.success('删除成功');
         loadItems();
@@ -264,8 +224,21 @@ function onDelete() {
     });
 }
 
+async function fetchDiskInfo() {
+    const res = await window.electronAPI.fetchDiskInfo();
+    return res;
+}
+onMounted(
+    async () => {
+        window.electronAPI.onRefreshFileList(() => {
+            loadItems();
+        });
+        currentPath.value = await window.electronAPI.getCurrentBrowserPath();
+        loadItems();
+    }
+)
 
-onMounted(loadItems)
+
 </script>
 
 <style scoped>

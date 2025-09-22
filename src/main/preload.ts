@@ -9,9 +9,20 @@ contextBridge.exposeInMainWorld('electronAPI', {
     fetchItems: (path: string) => ipcRenderer.invoke('fetch-items', path),
     createFolder: (path: string, name: string) => ipcRenderer.invoke('create-folder', path, name),
     selectFile: () => ipcRenderer.invoke('select-file'),
-    uploadFile: (filePath: string) => ipcRenderer.invoke('upload-file', filePath),
-    uploadClipboardFile: (fileData, fileName) =>
-      ipcRenderer.invoke('upload-clipboard-file', fileData, fileName)
+    uploadFile: (filePath: string, taskId: string) => ipcRenderer.invoke('upload-file', filePath, taskId),
+    uploadClipboardFile: (fileData, fileName, taskId) =>
+      ipcRenderer.invoke('upload-clipboard-file', fileData, fileName, taskId),
+    onUploadProgress: (callback) =>
+      ipcRenderer.on('upload-progress', (_event, taskId, progress) => {
+        callback(taskId, progress);
+      }),
+    fetchDiskInfo: () => ipcRenderer.invoke('fetch-disk-info'),
+    getCurrentBrowserPath: () => ipcRenderer.invoke('get-current-browser-path'),
+    getPreviewImg: (fileName: string) => ipcRenderer.invoke('get-preview-img', fileName),
+    deleteItems: (paths: string[]) => ipcRenderer.invoke('delete-items', paths),
+    onRefreshFileList: (callback) => ipcRenderer.on('refresh-file-list', (_event) => {
+      callback();
+    }),
     // sendMessage: (message: string) => ipcRenderer.send('message', message),
   // onUpdateNetDevices: (callback) => ipcRenderer.on('update-devices', (_event, value) => callback(value)),
   // onUpdateNetcardIpsSub: (callback) => ipcRenderer.on('update-netcard-ips-sub', (_event, value) => callback(value)),

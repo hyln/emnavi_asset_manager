@@ -1,43 +1,65 @@
 <div align="center"> 
 
-# emNavi Discover E
+![alt text](http://file.emnavi.tech/MEDIA_ASSETS/Asset_Manager/home_page.png)
+
+# emNavi Asset Manager
 </div>
 
+## 构建emNavi Asset Manager的原因
+
+用于代替掉之前的 emAlioss. 原因是
+
+1. 当前基于python的框架构建的程序很难称得上是桌面端程序
+1. emAlioss虽然花了比较久的时间构建，但是从安装到使用总是有一些bug
+1. 定义emAlioss时有误，将图片资源，视频资源，软件资源，隔离开， 这增加了复杂度但是并没有降低使用难度，最终效果不适合小团队使用
+1. oss服务对于大文件价格实在是太贵了，大文件需要存储到另外的地方，使得管理更加困难
 
 ## feature
 
-- 自动识别otg接口
-- 周期轮询局域网中的飞行器 (4s)
+### 速度
+
+运营商对上传进行了qos限速，以下是简单的测试
+
+![speed_test](http://file.emnavi.tech/MEDIA_ASSETS/Asset_Manager/speed_test.png)
+
+| 测试方式 | 最高速度 |  |
+| --- | --- | --- |
+| filebrowser | 平均约2.5MB,最后200M为1 | 峰值将近5MB, 最低约1MB，平均约3MB，在1GB数据传完后平均速度低于1MB。|
+| ssh/scp vscode  | 低于 2MB/s | 前期速度 约为1.5MB/s，会有一段时间降到1MB/s,,最低700KB/s，再一段时间恢复平均1.5MB/s如此循环2次。第三层被限速最后平均速度为500KB/s 最低200KB/s |
+| TCP 3端口(5001,5002,5003) | 平均4MB/s | 偶尔低于4MB |
+| TCP 5端口(5001~5005)，不断连 | 最低3.7，平均6.5MB，峰值10 | 5002端口在最终阶段被限流，平均速度是800KB |
+| TCP 5端口(5001~5005)，4MB 小包空闲传输 | 不低于2.8MB,大部分在5MB 左右 | 没有拖累速度的地方 |
+| 下载 使用ssh vscode  | 平均速度2MB |  |
+
+
+上面的测试结果表明单端口直连会被限制到1.5MB/s左右。
+
+在本软件测试中，最低不低于1.8MB/s 最高5.2MB/s 在测试中 1.2G 大小文件 用时300s,也就是说平均速度约为4MB，是顶着最大带宽运行的，从带宽变化图可以知道传输过程依然有被限速，但是已经比较满意了。
+
+
+### 认证
+
+认证使用TOTP，为了简化流程仅在第一次使用时验证
+
+
+## 上传
+
+粘贴板上传允许修改名字
+
+## TODO
+
+
+1. TCP端口到底稳不稳定依然需要时间检验
+
 
 ## 更新日志
 
-### 0.2.3
+### 0.0.2
 
-- 增加了对 nvidia 设备 otg端口的自动识别
-- 优化了代码结构
-- 增加了代理转发功能(未启用)
-- 更换了flask服务的端口
-- 更换了组播地址，兼容性更好
+- 增加粘贴板文件可重命名功能
 
 
-## 在机载PC上安装emnaviboard (出厂已安装)
-```bash
-sudo dpkg -r emnaviboard  # 如果曾经安装过
-sudo dpkg -i emNaviBoard-0.1.1.deb 
-```
-
-
-##  关于 框架选择
-使用electron 重构的版本，tauri的版本存在两个问题
-1. 向下兼容不太好
-2. 学习成本较高
-
-
-## Getting started
-
-```bash
-git clone git@github.com:hyaline-wang/emnaviDiscoverElectron.git
-```
+## 快速开始
 
 ### Install dependencies ⏬
 

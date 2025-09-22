@@ -3,7 +3,7 @@ import path, {join} from 'path';
 import { verifyTOTP } from './auth';
 import { randomUUID } from 'crypto';
 import configManager from './config';
-import { fetchItems,createFolder } from './filemanager';
+import { fetchItems,createFolder,fetchDiskInfo, fetchPreviewImg,deleteItems } from './filemanager';
 import { ControlClient,MultiPortUploader } from './upload';
 import { v4 as uuidv4 } from 'uuid';
 import fs from 'fs';
@@ -19,7 +19,7 @@ const SERVER_URL = `http://${SERVER_IP}:${SERVER_PORT}`; // 替换为你的服�
 const control_client = new ControlClient(SERVER_IP, SERVER_PORT);
 const multi_port_uploader = new MultiPortUploader(SERVER_IP, [5001, 5002, 5003, 5004, 5005]);
 
-let current_browser_path = "";
+let current_browser_path = config_manager.get('last_browser_path', '/');
 let authUUID = config_manager.get('authUUID');
 const islogin = !!authUUID;
 // config_manager.set('appVersion', app.getVersion());
@@ -37,7 +37,7 @@ function createWindow () {
       iconPath = join(__dirname,'static', 'airportFunction05.icns');
       break;
     default: // Linux 等
-      iconPath = join(__dirname,'static', 'airportFunction05.png');
+      iconPath = join(__dirname,'static', 'Assets.png');
       break;
   }
   }
@@ -50,15 +50,15 @@ function createWindow () {
         iconPath = join(process.resourcesPath,'static', 'airportFunction05.icns');
         break;
       default: // Linux 等
-        iconPath = join(process.resourcesPath,'static', 'airportFunction05.png');
+        iconPath = join(process.resourcesPath,'static', 'Assets.png');
         break;
     }
   }
   console.log("iconPath", iconPath);
 
   const mainWindow = new BrowserWindow({
-    width: 800,
-    height: 600,
+    width: 1280,
+    height: 720,
     autoHideMenuBar: true,
     icon: iconPath,
     webPreferences: {
@@ -85,6 +85,85 @@ function createWindow () {
   //   console.log('鼠标拖入文件或拖放操作中');
   //   // 可以做高亮提示或者准备上传逻辑
   // }
+
+
+
+
+
+
+});
+
+ipcMain.handle('upload-clipboard-file', async (event, fileData: ArrayBuffer, fileName: string, taskId: string) => {
+  if (fileName === "image.png") {
+    fileName = `screenshot-${Date.now()}.png`;
+  }
+  const dest = path.join(app.getPath('userData'), fileName);
+  const remote_dest = current_browser_path + '/' + fileName;
+  try {
+    const tmpFile = tmp.fileSync({ postfix: '.tmp' });
+    fs.writeFileSync(tmpFile.name, Buffer.from(fileData));
+    const stats = fs.statSync(tmpFile.name);
+    const uploadId = await control_client.startUpload(tmpFile.name, stats.size, remote_dest, authUUID);
+    const { emitter } =  await multi_port_uploader.sendFile(tmpFile.name, uploadId);
+    return new Promise((resolve, reject) => {
+      emitter.on('progress', (progress) => {
+        console.log('Upload progress:', progress)
+        mainWindow.webContents.send('upload-progress', { taskId, progress })
+      })
+
+      emitter.on('done', () => {
+        console.log('Upload done:', remote_dest)
+        mainWindow.webContents.send('refresh-file-list');
+        resolve({ success: true, uploadId, savedTo: dest, remote_dest })
+      })
+
+      emitter.on('error', (err) => {
+        console.error('Upload failed:', err)
+        reject({ success: false, uploadId, error: err })
+      })
+    })
+    
+  } catch (err) {
+    console.error('Failed to upload clipboard file:', err);
+    return { success: false, message: err instanceof Error ? err.message : String(err) };
+  }
+});
+// IPC: 上传文件
+ipcMain.handle('upload-file', async (event, filePath: string, taskId: string) => {
+  // 这里是 绝对路径
+  const remote_dest = current_browser_path + '/' + path.basename(filePath);
+  console.log('Uploading file:', filePath, 'to', remote_dest);
+  try {
+    
+    const stats = fs.statSync(filePath);
+    const uploadId = await control_client.startUpload(filePath, stats.size, remote_dest, authUUID);
+    const { emitter } =  await multi_port_uploader.sendFile(filePath, uploadId);
+    return new Promise((resolve, reject) => {
+          emitter.on('progress', (progress) => {
+            console.log('Upload progress:', progress)
+            mainWindow.webContents.send('upload-progress', { taskId, progress })
+          })
+
+          emitter.on('done', () => {
+            console.log('Upload done:', remote_dest)
+            mainWindow.webContents.send('refresh-file-list');
+            resolve({ success: true, uploadId, savedTo: filePath, remote_dest })
+          })
+
+          emitter.on('error', (err) => {
+            console.error('Upload failed:', err)
+            reject({ success: false, uploadId, error: err })
+          })
+        })
+    
+  } catch (err) {
+    console.error('Failed to upload clipboard file:', err);
+    return { success: false, message: err instanceof Error ? err.message : String(err) };
+  }
+});
+
+ipcMain.handle('get-current-browser-path', async () => {
+  return current_browser_path;
 });
 
   mainWindow.on('closed', () => {
@@ -142,7 +221,29 @@ ipcMain.on('ondragstart', (event, filePath) => {
 ipcMain.handle('check-is-login', async () => {
     return islogin;
 });
+ipcMain.handle('fetch-disk-info', async () => {
+    console.log("here");
+    const res = await fetchDiskInfo(authUUID);
+    console.log("disk info", res);
+    return { diskInfo: res };
+});
+ipcMain.handle('get-preview-img', async (_event, fileName: string) => {
+  const full_url = current_browser_path + "/" + fileName;
+  console.log('get-preview-img', full_url);
 
+  try {
+    const res = await fetchPreviewImg(full_url, authUUID || '');
+    if (!res) {
+      return { success: false, message: 'Preview image is null' };
+    }
+
+    console.log('Fetched preview image, size:', res.length);
+    return { success: true, data: res.toString('base64') };
+  } catch (err) {
+    console.error('Failed to fetch preview image:', err);
+    return { success: false, message: err instanceof Error ? err.message : String(err) };
+  }
+});
 ipcMain.handle('request-auth', async (_event, code) => {
     console.log('Received auth code:', code);
     // const uuid = randomUUID();
@@ -164,8 +265,15 @@ ipcMain.handle('request-auth', async (_event, code) => {
     }
 });
 
+ipcMain.handle('delete-items', async (_event, paths: string[]) => {
+    console.log('delete-items', paths);
+    const res = await deleteItems(paths, authUUID || '');
+    return res;
+    // return { success: true };
+});
 ipcMain.handle('fetch-items', async (_event, path) => {
     current_browser_path = path;
+    config_manager.set('last_browser_path', path);
     console.log('fetch-items', path, authUUID);
     return fetchItems(path, authUUID || '');
 });
@@ -185,61 +293,11 @@ ipcMain.handle('create-folder', async (_event, path, name) => {
 // });
 
 
-// IPC: 上传文件
-ipcMain.handle('upload-file', async (event, filePath: string) => {
-  // 这里是 绝对路径
-  const remote_dest = current_browser_path + '/' + path.basename(filePath);
-  console.log('Uploading file:', filePath, 'to', remote_dest);
-  try {
-    
-    const stats = fs.statSync(filePath);
-    const uploadId = await control_client.startUpload(filePath, stats.size, remote_dest, authUUID);
-    const { emitter } =  await multi_port_uploader.sendFile(filePath, uploadId);
-    emitter.on('progress', (progress) => {
-      // event.sender.send('upload-progress', progress);
-      console.log('Upload progress:', progress);
-    });
-    emitter.on('done', () => {
-      console.log('Upload done:', remote_dest);
-      // event.sender.send('upload-done', { success: true, remote_dest });
-      return { success: true, uploadId, savedTo: filePath, remote_dest };
-    });
-    
-  } catch (err) {
-    console.error('Failed to upload clipboard file:', err);
-    return { success: false, message: err instanceof Error ? err.message : String(err) };
-  }
-});
 
 
 
-ipcMain.handle('upload-clipboard-file', async (event, fileData: ArrayBuffer, fileName: string) => {
-  if (fileName === "image.png") {
-    fileName = `screenshot-${Date.now()}.png`;
-  }
-  const dest = path.join(app.getPath('userData'), fileName);
-  const remote_dest = current_browser_path + '/' + fileName;
-  try {
-    const tmpFile = tmp.fileSync({ postfix: '.tmp' });
-    fs.writeFileSync(tmpFile.name, Buffer.from(fileData));
-    const stats = fs.statSync(tmpFile.name);
-    const uploadId = await control_client.startUpload(tmpFile.name, stats.size, remote_dest, authUUID);
-    const { emitter } =  await multi_port_uploader.sendFile(tmpFile.name, uploadId);
-    emitter.on('progress', (progress) => {
-      // event.sender.send('upload-progress', progress);
-      console.log('Upload progress:', progress);
-    });
-    emitter.on('done', () => {
-      console.log('Upload done:', remote_dest);
-      // event.sender.send('upload-done', { success: true, remote_dest });
-      return { success: true, uploadId, savedTo: dest, remote_dest };
-    });
-    
-  } catch (err) {
-    console.error('Failed to upload clipboard file:', err);
-    return { success: false, message: err instanceof Error ? err.message : String(err) };
-  }
-});
+
+
 
 app.on('window-all-closed', function () {
   if (process.platform !== 'darwin') app.quit()

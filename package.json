@@ -1,6 +1,6 @@
 {
-  "name": "asset-manager",
-  "version": "0.0.1",
+  "name": "emnv-asset-manager",
+  "version": "0.0.2",
   "description": "emNavi Asset Manager",
   "main": "main/main.js",
   "scripts": {
