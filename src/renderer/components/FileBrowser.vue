@@ -186,7 +186,7 @@ function createFolder() {
 }
 
 function copyDownloadLink(row) {
-    const websiteUrl = 'http://file.emnavi.tech' // 替换为你的实际网站地址
+    const websiteUrl = 'https://file.emnavi.tech' // 替换为你的实际网站地址
     const filePath = currentPath.value ? `${currentPath.value}/${row.name}` : row.name
     const link = `${websiteUrl}/${(filePath)}`
     navigator.clipboard.writeText(link).then(() => {
