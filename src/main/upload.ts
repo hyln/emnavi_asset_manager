@@ -91,11 +91,15 @@ export class MultiPortUploader {
                 client.write(Buffer.concat([hdr, payload]));
                 client.end();
                 // resolve(true);
-                client.end(() => {
-                    resolve(true); // 真正等 end 事件再返回
-                });
+                // client.end(() => {
+                //     resolve(true); // 真正等 end 事件再返回
+                // });
 
             });
+            client.on('close', () => {
+                resolve(true);
+            });
+
             client.on('error', (err) => {
                 console.error(`[!] sendPacket error port=${port} seq=${seq} -> ${err}`);
                 resolve(false);
