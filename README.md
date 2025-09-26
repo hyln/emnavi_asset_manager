@@ -5,6 +5,8 @@
 # emNavi Asset Manager
 </div>
 
+## [点击下载](http://file.emnavi.tech/emnavi_tools/asset_manager/)
+
 ## 构建emNavi Asset Manager的原因
 
 用于代替掉之前的 emAlioss. 原因是
